@@ -2,7 +2,7 @@
 
 const csv = require('csvtojson');
 const mongoose = require('mongoose');
-const schema = require('./schema2.json');
+const schema = require('./schema.json');
 
 const area = "nyc";
 
