@@ -4,8 +4,7 @@ const schema = require('./schema.json');
 
 const area = "nyc";
 
-const zips = require(`./zips-${area}.json`);
-const zipcodes = zips.map(obj => String(obj["Zip Code"]));
+let zips, zipcodes;
 
 const businessSchema = new mongoose.Schema(schema);
 const Business = mongoose.model('Business', businessSchema);
@@ -83,6 +82,9 @@ async function insertYelp(yelpCsv) {
 }
 
 (async() => {
+  zips = await csv().fromFile(`zips-${area}.csv`)
+  zipcodes = zips.map(obj => String(obj["Zip Code"]));
+  console.log(zipcodes);
   await insertPB();
   await insertYelp(`businesses-${area}-filtered-clean.csv`);
   // await insertYelp("businesses-nassau-clean.csv");
