@@ -12,55 +12,16 @@
     "type": "string",
     "unique": true
   },
-  "Phone Label": {
-    "type": "string"
-  },
-  "Phone Type": {
-    "type": "string"
-  },
-  "Phone 2": {
-    "type": "string"
-  },
-  "Phone 2 Label": {
-    "type": "string"
-  },
-  "Phone 2 Type": {
-    "type": "string"
-  },
-  "Phone 3": {
-    "type": "string"
-  },
-  "Phone 3 Label": {
-    "type": "string"
-  },
-  "Phone 3 Type": {
-    "type": "string"
-  },
-  "Phone 4": {
-    "type": "string"
-  },
-  "Phone 4 Label": {
-    "type": "string"
-  },
-  "Phone 4 Type": {
-    "type": "string"
-  },
-  "Phone 5": {
-    "type": "string"
-  },
-  "Phone 5 Label": {
-    "type": "string"
-  },
-  "Phone 5 Type": {
-    "type": "string"
-  },
   "Company Name": {
     "type": "string"
   },
-  "Business Category": {
+  "Industry": {
     "type": "string"
   },
   "Yelp Categories": {
+    "type": "string"
+  },
+  "Business Category": {
     "type": "string"
   },
   "Address1": {
@@ -76,6 +37,9 @@
     "type": "string"
   },
   "Zip": {
+    "type": "string"
+  },
+  "County": {
     "type": "string"
   },
   "Longitude": {
