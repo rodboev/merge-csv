@@ -1,5 +1,3 @@
-// v2 processes a mashup list from PhoneBurner and Yelp
-
 const csv = require('csvtojson');
 const mongoose = require('mongoose');
 const schema = require('./schema.json');
@@ -12,12 +10,12 @@ const zipcodes = zips.map(obj => String(obj["Zip Code"]));
 const businessSchema = new mongoose.Schema(schema);
 const Business = mongoose.model('Business', businessSchema);
 
-mongoose.connect('mongodb://localhost:27017/filtered-nyc');
+mongoose.connect(`mongodb://localhost:27017/filtered-${area}`);
 
 async function insertPB() {
   // PhoneBurner
-  console.log("Inserting PhoneBurner data...");
-  const phoneburnerCsv = "phoneburner-nyc.csv";
+  const phoneburnerCsv = `phoneburner-${area}.csv`;
+  console.log(`Inserting PhoneBurner data from ${phoneburnerCsv}...`);
   const phoneburnerJson = await csv().fromFile(phoneburnerCsv)
   const phoneburnerFields = ["Address1", "Address2", "Industry", "City", "Company Name", "Business Category", "Email", "First Name", "Last Name", "Latitude", "Longitude", "Notes", "Phone", "Phone Type", "State", "Tags", "Zip", "City"]
   
@@ -36,10 +34,6 @@ async function insertPB() {
       })
     }
   }
-  /* await Business.insertMany(phoneburnerJson, {/
-    ordered: false, // continue writing, even if a single write fails
-    continueOnError: true
-  }) */
   console.log("Done with PhoneBurner...");
 }
 
@@ -57,7 +51,7 @@ async function insertYelp(yelpCsv) {
   latitude
   longitude
   */
-  console.log("Inserting Yelp data...");
+  console.log(`Inserting Yelp data from ${yelpCsv}...`);
   const yelpJson = await csv().fromFile(yelpCsv);
 
   for (entry of yelpJson) {
@@ -75,7 +69,6 @@ async function insertYelp(yelpCsv) {
         "Longitude": entry.longitude,
         "County": zips.find(obj => obj["Zip Code"] == entry.zip)?.County,
       }
-      // console.log(newObj["Yelp Categories"]);
       for (prop in newObj) {
         if (newObj[prop] === "null") delete newObj[prop];
       }
@@ -91,6 +84,6 @@ async function insertYelp(yelpCsv) {
 
 (async() => {
   await insertPB();
-  await insertYelp("businesses-nyc-filtered-clean.csv");
+  await insertYelp(`businesses-${area}-filtered-clean.csv`);
   // await insertYelp("businesses-nassau-clean.csv");
 })();
