@@ -34,7 +34,7 @@ async function insertPB() {
       })
     }
   }
-  console.log("Done with PhoneBurner...");
+  console.log(`Done with ${phoneburnerCsv}`);
 }
 
 async function insertYelp(yelpCsv) {
@@ -79,11 +79,12 @@ async function insertYelp(yelpCsv) {
     }
   }
 
-  console.log(`Done with Yelp (${yelpCsv})...`);
+  console.log(`Done with ${yelpCsv}`);
 }
 
 (async() => {
   await insertPB();
   await insertYelp(`businesses-${area}-filtered-clean.csv`);
   // await insertYelp("businesses-nassau-clean.csv");
+  process.exit(1)
 })();
