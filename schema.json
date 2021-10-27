@@ -15,13 +15,13 @@
   "Company Name": {
     "type": "string"
   },
-  "Industry": {
-    "type": "string"
-  },
   "Yelp Categories": {
     "type": "string"
   },
   "Business Category": {
+    "type": "string"
+  },
+  "Main Category": {
     "type": "string"
   },
   "Address1": {
