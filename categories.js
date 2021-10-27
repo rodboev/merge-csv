@@ -10,7 +10,8 @@ function findParentByAlias(alias) {
   if (parent.length === 0) return alias;
   if (categories.find(o => o.category === title)) return alias;
 
-  // console.log(`${cat} --> ${parent} (parent)`);
+  // console.log(`${cat.alias} --> ${parent} (parent)`);
+  // console.log(`${cat.title} --> ${parent} (parent)`);
   return findParentByAlias(parent[0]);
 }
 
@@ -19,21 +20,24 @@ function findName(alias) {
 }
 
 function matchCategory(cat) {
-  const categoryInList = categories.find(o => o.category === cat);
+  const categoryInList = categories.find(o => o.category.toLowerCase().trim() === cat.toLowerCase().trim());
   if (categoryInList) {
     // console.log(`${cat} --> OK`);
     return categoryInList.category;
   }
   else {
-    const alias = yelp.find(o => o.title === cat).alias;
-    const parentAlias = findParentByAlias(alias);
-    const parent = findName(parentAlias);
-    // console.log(`${cat} --> ${parentAlias} (parent) --> ${parent}`);
-    if (categories.find(o => o.category === parent)) {
-      return parent;
-    }
-    else {
-      matchCategory(parent);
+    const categoryInYelp = yelp.find(o => o.title.toLowerCase().trim() === cat.toLowerCase().trim());
+    if (categoryInYelp) {
+      const alias = categoryInYelp.alias;
+      const parentAlias = findParentByAlias(alias);
+      const parent = findName(parentAlias);
+      // console.log(`${cat} --> ${parentAlias} (parent) --> ${parent}`);
+      if (categories.find(o => o.category === parent)) {
+        return parent;
+      }
+      else {
+        matchCategory(parent);
+      }
     }
   }
 }
@@ -47,7 +51,10 @@ function matchCategories(cats) {
 }
 
 function renameCategory(cat) {
-  return categories.find(o => o.category === cat).newCategory;
+  const categoryInList = categories.find(o => o.category === cat);
+  if (categoryInList) {
+    return categories.find(o => o.category === cat).newCategory;
+  }
 }
 
 function renameCategories(cats) {
@@ -88,14 +95,16 @@ function getHeaviest(weights) {
   const first = atMax[0];
   if (atMax.length > 1) {
     const cats = atMax.map(o => o.category);
-    console.log(`[WARNING] Equal weights (${max}): ${cats.join(', ')}`);
-    console.log(`[WARNING] Using ${first.category}`);
+    // console.log(`[WARNING] Equal weights (${max}): ${cats.join(', ')}`);
+    // console.log(`[WARNING] Using ${first.category}`);
   }
   return first.category;
 }
 
 function getCategories(str) {
-  if (str.includes(',')) {
+  if (yelp.find(o => o.title === str) || categories.find(o => o.category === str)) return [str];
+
+  if (str.includes(',') /*&& !str.match(/^\d/)*/) {
     const cats = str.split(',').map(s => s.trim());
     return cats;
   }
@@ -107,9 +116,9 @@ function getCategories(str) {
 const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
 
 (async () => {
-  categories = await csv().fromFile('./catmap.csv')
+  categories = await csv().fromFile('./category-map.csv')
   const locations = [
-    /* {
+    /*
       name: 'Tryon Public House',
       categories: 'Bars, Gastropubs, American (Traditional)',
     },
@@ -120,7 +129,7 @@ const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
     {
       name: 'Accent Reduction and ESL for Business',
       categories: 'Private Tutors, Adult Education, Language Schools',
-    }, */
+    },
     {
       name: 'Columbia Ob/Gyn Uptown',
       categories: 'Medical Centers, Obstetricians & Gynecologists, Adult Education'
@@ -148,33 +157,71 @@ const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
     {
       name: 'Threes Brewing',
       categories: 'Beer Bar, Burgers, Venues & Event Spaces',
-    },
+    },*/
     {
       name: 'Today S Learning Center',
       categories: '8351-00 Child day care services',
     },
+    {
+      name: 'RELISH CATERERS',
+      categories: '',
+    },
+    {
+      name: 'SHOKUNIN BBQ',
+      categories: 'RESTAURANT',
+    },
+    {
+      name: 'SHOKUNIN BBQ',
+      categories: 'RESTAURANT',
+    },
+    {
+      name: '',
+      categories: '5499-0202 Juices, fruit or vegetable',
+    },
+    {
+      name: 'il Miglio Brick Oven Pizzeria & Italian Restaurant',
+      categories: 'Pizza, Italian',
+    },
+    {
+      name: 'New York Botanical Garden',
+      categories: 'Botanical Gardens',
+    },
+    {
+      name: 'JP Morgan Chase Cafeteria',
+      categories: 'Banks & Credit Unions, American (New)',
+    },
+    {
+      name: 'South End Press',
+      categories: 'Community Service/Non-Profit, Print Media',
+    },
+    {
+      name: 'Evergreen Liquor Store Inc',
+      categories: 'Beer, Wine & Spirits',
+    },
   ]
   console.log();
   for (location of locations) {
-    /*
     console.log(`Name:\t\t${location.name}`);
     const from = getCategories(location.categories);
-    console.log(`Original:\t${from}`);
-    const matched = matchCategories(from);
-    console.log(`Matched:\t${matched}`);
-    const newCats = renameCategories(matched);
-    console.log(`New names:\t${newCats}`);
-    const weights = getWeights(newCats);
-    console.log(`Weights:`);
-    console.log(weights);
-    const heaviest = getHeaviest(weights);
-    console.log(`Main Category:\t${heaviest}`);
-    console.log();
-    */
+    if (location.categories) {
+      console.log(`Original:\t${from}`);
+      const matched = matchCategories(from);
+      console.log(`Matched:\t${matched}`);
+      const newCats = renameCategories(matched);
+      console.log(`New names:\t${newCats}`);
+      const weights = getWeights(newCats);
+      console.log(`Weights:`);
+      console.log(weights);
+      const heaviest = getHeaviest(weights);
+      console.log(`Main Category:\t${heaviest}`);
+      console.log();
+    }
 
+    /*
     console.log(`Name:\t\t${location.name}`);
     console.log(`Categories:\t${location.categories}`);
     const winner = pipeline(getCategories, matchCategories, renameCategories, getWeights, getHeaviest)(location.categories);
     console.log(`Main:\t\t${winner}\n`);
+    */
   }
 })();
