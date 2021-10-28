@@ -84,7 +84,7 @@ async function insertPB({phoneburnerJson, yelpJson}) {
         if (shortened.some(s => entry["Company Name"].toLowerCase().includes(s))) {
           newObj["Yelp Categories"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.replace(/ies$|ers$|s$/, '').toLowerCase()));
           newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-          console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (from name)`);
+          // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (from name)`);
         }
       }
 
@@ -101,12 +101,14 @@ async function insertPB({phoneburnerJson, yelpJson}) {
           );
 
         if (yelpListing) {
-          if (score > 0.75 && !newObj["Yelp Categories"]) {
-            newObj["Yelp Categories"] = yelpListing.categories;
+          if (score > 0.75) {
+            if (!newObj["Yelp Categories"]) {
+              newObj["Yelp Categories"] = yelpListing.categories;
+            }
             newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
             console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (${score})`);
           }
-          else if (score > 0.625) {
+          else {
             newObj["Main Category"] = findMainCat(yelpListing.categories);
             console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main: ${newObj["Main Category"]} (${score})`);
           }
