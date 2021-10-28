@@ -14,7 +14,26 @@ mongoose.connect(`mongodb://localhost:27017/filtered-${area}-current`);
 
 const yelp = require('./categories.json');
 const yelpTitles = yelp.map(o => o.title);
-const singular = yelpTitles.map(title => title.endsWith('ies') ? title.replace('ies', 'y') : title)
+let shortened = [];
+yelpTitles.map(title => {
+	if (title.endsWith('ies')) {
+		const short = title.replace('ies', 'y').toLowerCase()
+		shortened.push();
+		// console.log(`(ies) Pushed ${title.replace('ies', 'y').toLowerCase()}`)
+  }
+	else if (title.endsWith('ers')) {
+		const short = title.replace('ers', '').toLowerCase();
+		if (!short.endsWith('t') && !short.endsWith('g') && !short.endsWith('b') && !short.endsWith('v') && !short.endsWith('i') && !short.endsWith('l')) {
+			shortened.push(short);
+			// console.log(`(ers) Pushed ${short}`)
+		}
+	}
+	else if (title.endsWith('s')) {
+		const short = title.replace(/s$/, '').toLowerCase()
+		shortened.push(short)
+		// console.log(`(s) Pushed ${short}`)
+  }
+});
 
 let categories;
 const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
@@ -45,34 +64,35 @@ async function insertPB({phoneburnerJson, yelpJson}) {
           );
 
         if (yelpListing && yelpListing.categories) {
-          newObj["Yelp Categories"] = yelpListing.categories.split('|').join(', ');
-          //console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]}`);
+          newObj["Yelp Categories"] = yelpListing.categories;
+          newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+          // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (cross-match)`);
         }
       }
 
-      if (newObj["Business Category"]) {
-        // console.log(`Working on ${entry["Company Name"]} ${entry["Phone"]} (${entry["Business Category"]})`)
+      if (newObj["Business Category"] /*&& categories.some(o => o.category === newObj["Business Category"])*/) {
         newObj["Main Category"] = findMainCat(newObj["Business Category"]);
+        // console.log(`${entry["Company Name"]} ${entry["Phone"]} Main: ${newObj["Main Category"]} (from Business)`);
       }
-      else if (newObj["Yelp Categories"]) {
+
+      if (newObj["Yelp Categories"]) {
         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-        // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category ${newObj["Main Category"]}`);
+        // console.log(`${entry["Company Name"]} ${entry["Phone"]} Main: ${newObj["Main Category"]} (from Yelp)`);
       }
-      else if (yelpTitles.map(
-        title => title.substr(title.length-1) === 's' ? title.substr(0, title.length-1) : title.toLowerCase()).some(str => entry["Company Name"].toLowerCase().includes(str.toLowerCase()))) {
-         newObj["Yelp Categories"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase()));
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]} (direct)`);
-         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category: ${newObj["Main Category"]} (direct)`);
+
+      if (!newObj["Yelp Categories"] && !newObj["Main Category"]) {
+        if (shortened.some(s => entry["Company Name"].toLowerCase().includes(s))) {
+          newObj["Yelp Categories"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.replace(/ies$|ers$|s$/, '').toLowerCase()));
+          newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+          console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (from name)`);
+        }
       }
-      else if (yelpTitles.map(
-        title => title.substr(title.length-3) === 'ies' ? title.substr(0, title.length-3) : title.toLowerCase()).some(str => entry["Company Name"].toLowerCase().includes(str.toLowerCase()))) {
-         newObj["Yelp Categories"] = singular.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase())).replace('y', 'ies')
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]} (direct)`);
-         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category: ${newObj["Main Category"]} (direct)`);
+
+      if (newObj["Business Category"] && !newObj["Main Category"]) {
+        // Search business category by shortened Yelp names
       }
-      else {
+
+      if (!newObj["Yelp Categories"] && !newObj["Main Category"]) {
         // console.log(`${entry["Company Name"]} ${entry["Phone"]} has no Business Category or Yelp Categories`);
         yelpListing = yelpJson.find(o =>
           (yelpStr = [o.name, o.address1, o.city, o.zip].join().toLowerCase()) &&
@@ -81,19 +101,24 @@ async function insertPB({phoneburnerJson, yelpJson}) {
           );
 
         if (yelpListing) {
-          if (score > 0.75) {
-            newObj["Yelp Categories"] = yelpListing.categories.split('|').join(', ');
-            console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]} (${score.toPrecision(3)})`);
+          if (score > 0.75 && !newObj["Yelp Categories"]) {
+            newObj["Yelp Categories"] = yelpListing.categories;
+            newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+            console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (${score})`);
           }
-          else {
+          else if (score > 0.625) {
             newObj["Main Category"] = findMainCat(yelpListing.categories);
-          }
-          if (!newObj["Main Category"]) {
-            newObj["Main Category"] = findMainCat(yelpListing.categories);
-            console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category: ${newObj["Main Category"]} (${score.toPrecision(3)})`);
+            console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main: ${newObj["Main Category"]} (${score})`);
           }
         }
       }
+
+      if (!newObj["Main Category"] && newObj["Yelp Categories"]) {
+        newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+        console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main: ${newObj["Main Category"]} (fallback, from Yelp ${newObj["Yelp Categories"]})`);
+      }
+
+      newObj["Yelp Categories"] && (newObj["Yelp Categories"] = newObj["Yelp Categories"].split('|').join(', '));
       
       const filter = { "Phone": newObj["Phone"] };
       await Business.findOneAndUpdate(filter, newObj, {
