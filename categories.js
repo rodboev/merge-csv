@@ -104,8 +104,8 @@ function getHeaviest(weights) {
 function getCategories(str) {
   if (yelp.find(o => o.title === str) || categories.find(o => o.category === str)) return [str];
 
-  if (str.includes(',') /*&& !str.match(/^\d/)*/) {
-    const cats = str.split(',').map(s => s.trim());
+  if (str.includes('|') /*&& !str.match(/^\d/)*/) {
+    const cats = str.split('|').map(s => s.trim());
     return cats;
   }
   else {
@@ -118,37 +118,37 @@ const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
 (async () => {
   categories = await csv().fromFile('./category-map.csv')
   const locations = [
-    /*
+    {
       name: 'Tryon Public House',
-      categories: 'Bars, Gastropubs, American (Traditional)',
+      categories: 'Bars|Gastropubs|American (Traditional)',
     },
     {
       name: 'Bronx Alehouse',
-      categories: 'Pubs, American (Traditional)',
+      categories: 'Pubs|American (Traditional)',
     },
     {
       name: 'Accent Reduction and ESL for Business',
-      categories: 'Private Tutors, Adult Education, Language Schools',
+      categories: 'Private Tutors|Adult Education|Language Schools',
     },
     {
       name: 'Columbia Ob/Gyn Uptown',
-      categories: 'Medical Centers, Obstetricians & Gynecologists, Adult Education'
+      categories: 'Medical Centers|Obstetricians & Gynecologists|Adult Education'
     },
     {
       name: 'Glam House Bx',
-      categories: 'Party & Event Planning, Venues & Event Spaces, Party Equipment Rentals'
+      categories: 'Party & Event Planning|Venues & Event Spaces|Party Equipment Rentals'
     },
     {
       name: 'Lincoln Technical Institute - Queens',
-      categories: 'Colleges & Universities, Adult Education, Vocational & Technical School'
+      categories: 'Colleges & Universities|Adult Education|Vocational & Technical School'
     },
     {
       name: 'Samuel Field Y',
-      categories: 'Preschools, Community Service/Non-Profit, Child Care & Day Care'
+      categories: 'Preschools|Community Service/Non-Profit|Child Care & Day Care'
     },
     {
       name: 'Bohemian Hall & Beer Garden',
-      categories: 'Beer Gardens, Venues & Event Spaces',
+      categories: 'Beer Gardens|Venues & Event Spaces',
     },
     {
       name: 'Hotel 64',
@@ -156,8 +156,8 @@ const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
     },
     {
       name: 'Threes Brewing',
-      categories: 'Beer Bar, Burgers, Venues & Event Spaces',
-    },*/
+      categories: 'Beer Bar|Burgers|Venues & Event Spaces',
+    },
     {
       name: 'Today S Learning Center',
       categories: '8351-00 Child day care services',
@@ -171,16 +171,12 @@ const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
       categories: 'RESTAURANT',
     },
     {
-      name: 'SHOKUNIN BBQ',
-      categories: 'RESTAURANT',
-    },
-    {
       name: '',
       categories: '5499-0202 Juices, fruit or vegetable',
     },
     {
       name: 'il Miglio Brick Oven Pizzeria & Italian Restaurant',
-      categories: 'Pizza, Italian',
+      categories: 'Pizza|Italian',
     },
     {
       name: 'New York Botanical Garden',
@@ -188,15 +184,23 @@ const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
     },
     {
       name: 'JP Morgan Chase Cafeteria',
-      categories: 'Banks & Credit Unions, American (New)',
+      categories: 'Banks & Credit Unions|American (New)',
     },
     {
       name: 'South End Press',
-      categories: 'Community Service/Non-Profit, Print Media',
+      categories: 'Community Service/Non-Profit|Print Media',
     },
     {
       name: 'Evergreen Liquor Store Inc',
       categories: 'Beer, Wine & Spirits',
+    },
+    {
+      name: 'Evergreen Liquor Store Inc',
+      categories: 'Beer, Wine & Spirits',
+    },
+    {
+      name: 'Cheese + Wine Hoboken',
+      categories: 'Beer, Wine & Spirits|Cheese Shops',
     },
   ]
   console.log();
