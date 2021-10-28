@@ -1,6 +1,7 @@
 const csv = require('csvtojson');
 const mongoose = require('mongoose');
 const schema = require('./schema.json');
+const {compareTwoStrings: compare} = require('string-similarity');
 
 const area = "nyc";
 
@@ -33,26 +34,47 @@ async function insertPB({phoneburnerJson, yelpJson}) {
       }
       newObj["County"] = zips.find(obj => obj["Zip Code"] == entry["Zip"])?.County;
       
+      let yelpListing;
+
       if (!entry["Business Category"]) {
-        const yelpListing = yelpJson.find(o =>
+        yelpListing = yelpJson.find(o =>
           o.address1.toLowerCase() === entry["Address1"].toLowerCase() ||
           o.name.toLowerCase().includes(entry["Company Name"].toLowerCase()) ||
           entry["Company Name"].toLowerCase().includes(o.name.toLowerCase())
           );
 
         if (yelpListing && yelpListing.categories) {
-          newObj["Yelp Category"] = yelpListing.categories;
-          console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Category"]}`);
+          newObj["Yelp Categories"] = yelpListing.categories.split('|').join(', ');
+          // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]}`);
         }
+      }
+
+      if (!newObj["Yelp Categories"]) {
+        yelpListing = yelpJson.find(o =>
+          (yelpStr = [o.name, o.address1, o.city, o.zip].join().toLowerCase()) &&
+          (pbStr = [entry["Company Name"], entry["Address1"], entry["City"], entry["Zip"]].join().toLowerCase()) &&
+          ((score = compare(yelpStr, pbStr)) > 0.625)
+          );
+
+        if (yelpListing && yelpListing.categories) {
+          if (score > 0.75) {
+            newObj["Yelp Categories"] = yelpListing.categories.split('|').join(', ')
+            console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categoroies: ${newObj["Yelp Categories"]} (${score.toPrecision(3)})`);
+          }
+          else {
+            newObj["Main Category"] = findMainCat(yelpListing.categories);
+            console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category: ${newObj["Main Category"]} (${score.toPrecision(3)})`);
+          }
+        }  
       }
 
       if (newObj["Business Category"]) {
         // console.log(`Working on ${entry["Company Name"]} ${entry["Phone"]} (${entry["Business Category"]})`)
         newObj["Main Category"] = findMainCat(newObj["Business Category"]);
       }
-      if (newObj["Yelp Category"]) {
-        newObj["Main Category"] = findMainCat(newObj["Yelp Category"]);
-        // console.log(`From ${newObj["Yelp Category"]} assigned Main Category ${newObj["Main Category"]}`);
+      if (newObj["Yelp Categories"]) {
+        newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+        // console.log(`From ${newObj["Yelp Categories"]} assigned Main Category ${newObj["Main Category"]}`);
       }
       
       const filter = { "Phone": newObj["Phone"] };
@@ -76,7 +98,7 @@ async function insertYelp({phoneburnerJson, yelpJson}) {
       const newObj = {
         "Phone": entry.phone,
         "Company Name": entry.name,
-        "Yelp Categories": entry.categories.replace(/\|/g, ', '),
+        "Yelp Categories": entry.categories.split('|').join(', '),
         "Address1": entry.address1,
         "Address2": [entry.address2, entry.address3].filter(str => Boolean(str) && str !== "null").join(", "),
         "City": entry.city,
