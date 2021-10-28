@@ -10,7 +10,7 @@ let zips, zipcodes;
 const businessSchema = new mongoose.Schema(schema);
 const Business = mongoose.model('Business', businessSchema);
 
-mongoose.connect(`mongodb://localhost:27017/filtered-${area}-cats`);
+mongoose.connect(`mongodb://localhost:27017/filtered-${area}`);
 
 const yelp = require('./categories.json');
 const yelpTitles = yelp.map(o => o.title);
@@ -51,7 +51,7 @@ async function insertPB({phoneburnerJson, yelpJson}) {
           );
 
         if (yelpListing && yelpListing.categories) {
-          newObj["Yelp Categories"] = yelpListing.categories;
+          newObj["Yelp Categories"] = yelpListing.categories.split('|').join(', ');
           //console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]}`);
         }
       }
@@ -67,13 +67,17 @@ async function insertPB({phoneburnerJson, yelpJson}) {
       else if (yelpTitles.map(
         title => title.substr(title.length-1) === 's' ? title.substr(0, title.length-1) : title.toLowerCase()).some(str => entry["Company Name"].toLowerCase().includes(str.toLowerCase()))) {
          newObj["Yelp Categories"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase()));
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories ${newObj["Yelp Categories"]} by direct category`);
+         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]} (direct)`);
+         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category: ${newObj["Main Category"]} (direct)`);
       }
       else if (yelpTitles.map(
         title => title.substr(title.length-3) === 'ies' ? title.substr(0, title.length-3) : title.toLowerCase()).some(str => entry["Company Name"].toLowerCase().includes(str.toLowerCase()))) {
         const singular = yelpTitles.map(title => title.endsWith('ies') ? title.replace('ies', 'y') : title)
          newObj["Yelp Categories"] = singular.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase())).replace('y', 'ies')
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories ${newObj["Yelp Categories"]} by direct category`);
+         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]} (direct)`);
+         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category: ${newObj["Main Category"]} (direct)`);
       }
       else {
         // console.log(`${entry["Company Name"]} ${entry["Phone"]} has no Business Category or Yelp Categories`);
