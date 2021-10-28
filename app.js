@@ -10,7 +10,7 @@ let zips, zipcodes;
 const businessSchema = new mongoose.Schema(schema);
 const Business = mongoose.model('Business', businessSchema);
 
-mongoose.connect(`mongodb://localhost:27017/filtered-${area}-current`);
+mongoose.connect(`mongodb://localhost:27017/filtered-${area}`);
 
 const yelp = require('./categories.json');
 const yelpTitles = yelp.map(o => o.title);
@@ -18,7 +18,7 @@ let shortened = [];
 yelpTitles.map(title => {
 	if (title.endsWith('ies')) {
 		const short = title.replace('ies', 'y').toLowerCase()
-		shortened.push();
+		shortened.push(short);
 		// console.log(`(ies) Pushed ${title.replace('ies', 'y').toLowerCase()}`)
   }
 	else if (title.endsWith('ers')) {
@@ -72,28 +72,32 @@ async function insertPB({phoneburnerJson, yelpJson}) {
 
       if (newObj["Business Category"] /*&& categories.some(o => o.category === newObj["Business Category"])*/) {
         newObj["Main Category"] = findMainCat(newObj["Business Category"]);
-        // console.log(`${entry["Company Name"]} ${entry["Phone"]} Main: ${newObj["Main Category"]} (from Business)`);
+        // console.log(`${entry["Company Name"]} ${entry["Phone"]} Main: ${newObj["Main Category"]} (from Business: {newObj["Business Category"]})`);
       }
 
       if (newObj["Yelp Categories"]) {
         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-        // console.log(`${entry["Company Name"]} ${entry["Phone"]} Main: ${newObj["Main Category"]} (from Yelp)`);
+        // console.log(`${entry["Company Name"]} ${entry["Phone"]} Main: ${newObj["Main Category"]} (from Yelp: {newObj["Yelp Categories"]})`);
       }
 
       if (!newObj["Yelp Categories"] && !newObj["Main Category"]) {
         if (shortened.some(s => entry["Company Name"].toLowerCase().includes(s))) {
           newObj["Yelp Categories"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.replace(/ies$|ers$|s$/, '').toLowerCase()));
           newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-          // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (from name)`);
+          // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (from Name)`);
         }
       }
 
-      if (newObj["Business Category"] && !newObj["Main Category"]) {
-        // Search business category by shortened Yelp names
+      if (newObj["Business Category"] && !newObj["Yelp Categories"] && !newObj["Main Category"]) {
+        if (yelpTitles.some(s => newObj["Business Category"].toLowerCase().includes(s.toLowerCase()))) {
+          newObj["Yelp Categories"] = yelpTitles.filter(title => newObj["Business Category"].toLowerCase().includes(title.toLowerCase())).join("|");
+          newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
+          // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp: ${newObj["Yelp Categories"]}, Main: ${newObj["Main Category"]} (from Business: ${newObj["Business Category"]})`);
+        }
       }
 
+      // Fuzzy match
       if (!newObj["Yelp Categories"] && !newObj["Main Category"]) {
-        // console.log(`${entry["Company Name"]} ${entry["Phone"]} has no Business Category or Yelp Categories`);
         yelpListing = yelpJson.find(o =>
           (yelpStr = [o.name, o.address1, o.city, o.zip].join().toLowerCase()) &&
           (pbStr = [entry["Company Name"], entry["Address1"], entry["City"], entry["Zip"]].join().toLowerCase()) &&
@@ -117,7 +121,7 @@ async function insertPB({phoneburnerJson, yelpJson}) {
 
       if (!newObj["Main Category"] && newObj["Yelp Categories"]) {
         newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
-        console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main: ${newObj["Main Category"]} (fallback, from Yelp ${newObj["Yelp Categories"]})`);
+        console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main: ${newObj["Main Category"]} (fallback, from Yelp: ${newObj["Yelp Categories"]})`);
       }
 
       newObj["Yelp Categories"] && (newObj["Yelp Categories"] = newObj["Yelp Categories"].split('|').join(', '));
