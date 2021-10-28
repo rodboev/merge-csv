@@ -16,11 +16,8 @@ let categories;
 const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
 const findMainCat = pipeline(getCategories, matchCategories, renameCategories, getWeights, getHeaviest);
 
-async function insertPB() {
+async function insertPB({phoneburnerJson, yelpJson}) {
   // PhoneBurner
-  const phoneburnerCsv = `phoneburner-${area}.csv`;
-  console.log(`Inserting PhoneBurner data from ${phoneburnerCsv}...`);
-  const phoneburnerJson = await csv().fromFile(phoneburnerCsv)
   const phoneburnerFields = ["Address1", "Address2", "City", "Company Name", "Business Category", "Email", "First Name", "Last Name", "Latitude", "Longitude", "Notes", "Phone", "Phone Type", "State", "Tags", "Zip", "City"]
   categories = await csv().fromFile('./category-map.csv')
   
@@ -35,9 +32,27 @@ async function insertPB() {
         }
       }
       newObj["County"] = zips.find(obj => obj["Zip Code"] == entry["Zip"])?.County;
-      if (entry["Business Category"]) {
+      
+      if (!entry["Business Category"]) {
+        const yelpListing = yelpJson.find(o =>
+          o.address1.toLowerCase() === entry["Address1"].toLowerCase() ||
+          o.name.toLowerCase().includes(entry["Company Name"].toLowerCase()) ||
+          entry["Company Name"].toLowerCase().includes(o.name.toLowerCase())
+          );
+
+        if (yelpListing && yelpListing.categories) {
+          newObj["Yelp Category"] = yelpListing.categories;
+          console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Category"]}`);
+        }
+      }
+
+      if (newObj["Business Category"]) {
         // console.log(`Working on ${entry["Company Name"]} ${entry["Phone"]} (${entry["Business Category"]})`)
-        newObj["Main Category"] = findMainCat(entry["Business Category"]);
+        newObj["Main Category"] = findMainCat(newObj["Business Category"]);
+      }
+      if (newObj["Yelp Category"]) {
+        newObj["Main Category"] = findMainCat(newObj["Yelp Category"]);
+        // console.log(`From ${newObj["Yelp Category"]} assigned Main Category ${newObj["Main Category"]}`);
       }
       
       const filter = { "Phone": newObj["Phone"] };
@@ -51,25 +66,9 @@ async function insertPB() {
       }
     }
   }
-  console.log(`Done with ${phoneburnerCsv}`);
 }
 
-async function insertYelp(yelpCsv) {
-  /* Yelp fields: 
-  name
-  phone
-  categories
-  address1
-  address2
-  address3
-  city
-  state
-  zip
-  latitude
-  longitude
-  */
-  console.log(`Inserting Yelp data from ${yelpCsv}...`);
-  const yelpJson = await csv().fromFile(yelpCsv);
+async function insertYelp({phoneburnerJson, yelpJson}) {
   categories = await csv().fromFile('./category-map.csv')
 
   for (entry of yelpJson) {
@@ -77,7 +76,7 @@ async function insertYelp(yelpCsv) {
       const newObj = {
         "Phone": entry.phone,
         "Company Name": entry.name,
-        "Yelp Categories": entry.categories,
+        "Yelp Categories": entry.categories.replace(/\|/g, ', '),
         "Address1": entry.address1,
         "Address2": [entry.address2, entry.address3].filter(str => Boolean(str) && str !== "null").join(", "),
         "City": entry.city,
@@ -87,6 +86,7 @@ async function insertYelp(yelpCsv) {
         "Longitude": entry.longitude,
         "County": zips.find(obj => obj["Zip Code"] == entry.zip)?.County,
       }
+
       if (entry.categories) {
         // console.log(`Working on ${entry.name} ${entry.phone} (${entry.categories})`)
         newObj["Main Category"] = findMainCat(entry.categories);
@@ -95,7 +95,7 @@ async function insertYelp(yelpCsv) {
         if (newObj[prop] === "null") delete newObj[prop];
       }
       const filter = { "Phone": newObj["Phone"] };
-      await Business.findOneAndUpdate(filter, newObj, {
+      const doc = await Business.findOneAndUpdate(filter, newObj, {
         upsert: true // insert if not found
       })
     }
@@ -103,8 +103,6 @@ async function insertYelp(yelpCsv) {
       // console.log(`Skipped ${entry.phone || "[no phone]"} in ${entry.zip}`);
     }
   }
-
-  console.log(`Done with ${yelpCsv}`);
 }
 
 function findParentByAlias(alias) {
@@ -209,8 +207,8 @@ function getHeaviest(weights) {
 function getCategories(str) {
   if (yelp.find(o => o.title === str) || categories.find(o => o.category === str)) return [str];
 
-  if (str.includes(',') /*&& !str.match(/^\d/)*/) {
-    const cats = str.split(',').map(s => s.trim());
+  if (str.includes('|') /*&& !str.match(/^\d/)*/) {
+    const cats = str.split('|').map(s => s.trim());
     return cats;
   }
   else {
@@ -221,7 +219,19 @@ function getCategories(str) {
 (async() => {
   zips = await csv().fromFile(`zips-${area}.csv`)
   zipcodes = zips.map(obj => String(obj["Zip Code"]));
-  await insertPB();
-  await insertYelp(`businesses-${area}-filtered-clean.csv`);
+
+  const phoneburnerCsv = `phoneburner-${area}.csv`;
+  const phoneburnerJson = await csv().fromFile(phoneburnerCsv);
+  const yelpCsv = `businesses-${area}-filtered-clean.csv`;
+  const yelpJson = await csv().fromFile(yelpCsv);
+
+  console.log(`Inserting PhoneBurner data from ${phoneburnerCsv}...`);
+  await insertPB({ phoneburnerJson, yelpJson });
+  console.log(`Done with ${phoneburnerCsv}`);
+
+  console.log(`Inserting Yelp data from ${yelpCsv}...`);
+  await insertYelp({ phoneburnerJson, yelpJson });
+  console.log(`Done with ${yelpCsv}`);
+
   process.exit(1)
 })();
