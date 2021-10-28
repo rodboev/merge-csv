@@ -51,8 +51,8 @@ async function insertPB({phoneburnerJson, yelpJson}) {
           );
 
         if (yelpListing && yelpListing.categories) {
-          newObj["Yelp Category"] = yelpListing.categories;
-          //console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Category"]}`);
+          newObj["Yelp Categories"] = yelpListing.categories;
+          //console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories: ${newObj["Yelp Categories"]}`);
         }
       }
 
@@ -60,20 +60,20 @@ async function insertPB({phoneburnerJson, yelpJson}) {
         // console.log(`Working on ${entry["Company Name"]} ${entry["Phone"]} (${entry["Business Category"]})`)
         newObj["Main Category"] = findMainCat(newObj["Business Category"]);
       }
-      else if (newObj["Yelp Category"]) {
-        newObj["Main Category"] = findMainCat(newObj["Yelp Category"]);
+      else if (newObj["Yelp Categories"]) {
+        newObj["Main Category"] = findMainCat(newObj["Yelp Categories"]);
         // console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Main Category ${newObj["Main Category"]}`);
       }
       else if (yelpTitles.map(
         title => title.substr(title.length-1) === 's' ? title.substr(0, title.length-1) : title.toLowerCase()).some(str => entry["Company Name"].toLowerCase().includes(str.toLowerCase()))) {
-         newObj["Yelp Category"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase()));
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Category ${newObj["Yelp Category"]} by direct category`);
+         newObj["Yelp Categories"] = yelpTitles.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase()));
+         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories ${newObj["Yelp Categories"]} by direct category`);
       }
       else if (yelpTitles.map(
         title => title.substr(title.length-3) === 'ies' ? title.substr(0, title.length-3) : title.toLowerCase()).some(str => entry["Company Name"].toLowerCase().includes(str.toLowerCase()))) {
         const singular = yelpTitles.map(title => title.endsWith('ies') ? title.replace('ies', 'y') : title)
-         newObj["Yelp Category"] = singular.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase())).replace('y', 'ies')
-         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Category ${newObj["Yelp Category"]} by direct category`);
+         newObj["Yelp Categories"] = singular.find(title => entry["Company Name"].toLowerCase().includes(title.substr(0, title.length-1).toLowerCase())).replace('y', 'ies')
+         console.log(`${entry["Company Name"]} ${entry["Phone"]} assigned Yelp Categories ${newObj["Yelp Categories"]} by direct category`);
       }
       else {
         // console.log(`${entry["Company Name"]} ${entry["Phone"]} has no Business Category or Yelp Categories`);
