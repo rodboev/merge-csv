@@ -14,26 +14,23 @@ mongoose.connect(`mongodb://localhost:27017/filtered-${area}`);
 
 const yelp = require('./categories.json');
 const yelpTitles = yelp.map(o => o.title);
-let shortened = [];
-yelpTitles.map(title => {
-	if (title.endsWith('ies')) {
-		const short = title.replace('ies', 'y').toLowerCase()
-		shortened.push(short);
-		// console.log(`(ies) Pushed ${title.replace('ies', 'y').toLowerCase()}`)
+const shortened = yelpTitles.reduce((a, title) => {
+  if (title.endsWith('ies')) {
+    const short = title.replace('ies', 'y').toLowerCase()
+    a.push(short);
   }
-	else if (title.endsWith('ers')) {
-		const short = title.replace('ers', '').toLowerCase();
-		if (!short.endsWith('t') && !short.endsWith('g') && !short.endsWith('b') && !short.endsWith('v') && !short.endsWith('i') && !short.endsWith('l')) {
-			shortened.push(short);
-			// console.log(`(ers) Pushed ${short}`)
-		}
-	}
-	else if (title.endsWith('s')) {
-		const short = title.replace(/s$/, '').toLowerCase()
-		shortened.push(short)
-		// console.log(`(s) Pushed ${short}`)
+  else if (title.endsWith('ers')) {
+    const short = title.replace('ers', '').toLowerCase();
+    if (!short.endsWith('t') && !short.endsWith('g') && !short.endsWith('b') && !short.endsWith('v') && !short.endsWith('i') && !short.endsWith('l')) {
+      a.push(short);
+    }
   }
-});
+  else if (title.endsWith('s')) {
+    const short = title.replace(/s$/, '').toLowerCase()
+    a.push(short)
+  }
+  return a;
+}, []);
 
 let categories;
 const pipeline = (...fns) => fns.reduce((f, g) => (...args) => g(f(...args)));
@@ -180,7 +177,7 @@ function findParentByAlias(alias) {
   const cat = yelp.find(o => o.alias === alias);
   const parent = cat.parents;
   const title = cat.title;
-	
+  
   if (parent.length === 0) return alias;
   if (categories.find(o => o.category === title)) return alias;
 
