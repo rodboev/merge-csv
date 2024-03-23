@@ -3,14 +3,13 @@ const mongoose = require('mongoose');
 const schema = require('./schema.json');
 const {compareTwoStrings: compare} = require('string-similarity');
 
-const area = "nyc";
+const areas = [ "nyc", "upstate", "nassau", "nj" ]
+const insertPhoneburner = false
 
 let zips, zipcodes;
 
 const businessSchema = new mongoose.Schema(schema);
 const Business = mongoose.model('Business', businessSchema);
-
-mongoose.connect(`mongodb://localhost:27017/filtered-${area}`);
 
 const yelp = require('./categories.json');
 const yelpTitles = yelp.map(o => o.title);
@@ -136,7 +135,7 @@ async function insertPB({phoneburnerJson, yelpJson}) {
   }
 }
 
-async function insertYelp({phoneburnerJson, yelpJson}) {
+async function insertYelp({yelpJson}) {
   categories = await csv().fromFile('./category-map.csv')
 
   for (entry of yelpJson) {
@@ -285,21 +284,27 @@ function getCategories(str) {
 }
 
 (async() => {
-  zips = await csv().fromFile(`zips-${area}.csv`)
+  zips = await csv().fromFile(`zips.csv`)
   zipcodes = zips.map(obj => String(obj["Zip Code"]));
 
-  const phoneburnerCsv = `phoneburner-${area}.csv`;
-  const phoneburnerJson = await csv().fromFile(phoneburnerCsv);
-  const yelpCsv = `businesses-${area}-filtered-clean.csv`;
-  const yelpJson = await csv().fromFile(yelpCsv);
+  for (const area of areas) {
+    await mongoose.disconnect()
+    await mongoose.connect(`mongodb://localhost:27017/preflight-${area}`)
+    const yelpCsv = `businesses-${area}-filtered-clean.csv`;
+    const yelpJson = await csv().fromFile(yelpCsv);
+    
+    if (insertPhoneburner) {
+      const phoneburnerCsv = `phoneburner-${area}.csv`;
+      const phoneburnerJson = await csv().fromFile(phoneburnerCsv);
+      console.log(`Inserting PhoneBurner data from ${phoneburnerCsv}...`);
+      await insertPB({ phoneburnerJson, yelpJson });
+      console.log(`Done with ${phoneburnerCsv}`);
+    }
 
-  console.log(`Inserting PhoneBurner data from ${phoneburnerCsv}...`);
-  await insertPB({ phoneburnerJson, yelpJson });
-  console.log(`Done with ${phoneburnerCsv}`);
-
-  console.log(`Inserting Yelp data from ${yelpCsv}...`);
-  await insertYelp({ phoneburnerJson, yelpJson });
-  console.log(`Done with ${yelpCsv}`);
+    console.log(`Inserting Yelp data from ${yelpCsv}...`);
+    await insertYelp({ yelpJson });
+    console.log(`Done with ${yelpCsv}`);
+  }
 
   process.exit(1)
 })();
