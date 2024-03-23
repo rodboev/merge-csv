@@ -167,7 +167,7 @@ async function insertYelp({yelpJson}) {
       })
     }
     else {
-      // console.log(`Skipped ${entry.phone || "[no phone]"} in ${entry.zip}`);
+      console.log(`Skipped ${entry.phone || "[no phone]"} in ${entry.zip}`);
     }
   }
 }
